@@ -1,0 +1,57 @@
+{
+  "name": "Research Papers",
+  "description": "Academic research paper schema",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "authors": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "abstract": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "publication_venue": {
+        "type": "string"
+      },
+      "publication_year": {
+        "type": "integer"
+      },
+      "doi": {
+        "type": "string"
+      },
+      "keywords": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "citation_count": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "title",
+      "authors",
+      "abstract",
+      "url"
+    ]
+  },
+  "prompt": "Extract academic research papers with title, authors, abstract, publication venue, year, DOI, keywords, and citation count.",
+  "created_at": "2025-07-29T22:07:11.391131",
+  "updated_at": "2025-07-29T22:07:11.392766",
+  "tags": [
+    "academic",
+    "research",
+    "papers"
+  ]
+}

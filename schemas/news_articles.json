@@ -1,0 +1,50 @@
+{
+  "name": "News Articles",
+  "description": "Schema for news article extraction",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "headline": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "publication": {
+        "type": "string"
+      },
+      "publish_date": {
+        "type": "string",
+        "format": "date"
+      },
+      "category": {
+        "type": "string"
+      },
+      "sentiment": {
+        "type": "string",
+        "enum": [
+          "positive",
+          "negative",
+          "neutral"
+        ]
+      }
+    },
+    "required": [
+      "headline",
+      "url",
+      "summary"
+    ]
+  },
+  "prompt": "Extract news articles with headline, URL, summary, publication name, publish date, category, and sentiment analysis.",
+  "created_at": "2025-07-29T22:07:11.391109",
+  "updated_at": "2025-07-29T22:07:11.392097",
+  "tags": [
+    "news",
+    "articles",
+    "media"
+  ]
+}

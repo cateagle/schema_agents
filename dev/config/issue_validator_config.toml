@@ -1,0 +1,36 @@
+# Configuration for issue documentation validation
+
+[libraries]
+# Libraries that should be considered "always available"
+standard_library = [
+    "os",
+    "sys",
+    "pathlib",
+    "typing",
+    "json",
+    "re",
+    "datetime",
+    "collections",
+    "itertools",
+    "functools",
+    "argparse",
+]
+
+# Add your project-specific libraries here
+always_available = [
+    # Example: "requests", "pydantic"
+]
+
+[validation]
+# Validation rules for issue documentation
+require_all_sections = false
+require_metadata = true
+require_status = true
+warn_missing_sections = true
+
+[categories]
+# Define valid issue categories for your project
+# Example:
+# bugs = "Bug reports and fixes"
+# performance = "Performance issues and optimizations"
+# documentation = "Documentation improvements"

@@ -1,0 +1,23 @@
+# Streamlit Configuration
+# This file should be placed in: .streamlit/config.toml
+
+[server]
+# Disable file watching to avoid inotify issues on Linux
+fileWatcherType = "none"
+# Disable auto-reloading
+runOnSave = false
+
+[browser]
+# Disable usage statistics collection
+gatherUsageStats = false
+
+[theme]
+# Optional: Set a nice color theme
+primaryColor = "#667eea"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+
+[global]
+# Disable some features that might cause issues
+developmentMode = false

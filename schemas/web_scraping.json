@@ -1,0 +1,48 @@
+{
+  "name": "Web Scraping",
+  "description": "General web content scraping schema",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Page or article title"
+      },
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Source URL"
+      },
+      "content": {
+        "type": "string",
+        "description": "Main content or summary"
+      },
+      "author": {
+        "type": "string",
+        "description": "Content author if available"
+      },
+      "date": {
+        "type": "string",
+        "description": "Publication date"
+      },
+      "relevance": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+      }
+    },
+    "required": [
+      "title",
+      "url",
+      "content"
+    ]
+  },
+  "prompt": "Extract web content including title, URL, main content, author, publication date, and assess relevance on a scale of 0-10.",
+  "created_at": "2025-07-29T22:07:11.391060",
+  "updated_at": "2025-07-29T22:07:11.391141",
+  "tags": [
+    "web",
+    "scraping",
+    "general"
+  ]
+}

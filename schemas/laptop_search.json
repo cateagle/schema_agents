@@ -1,0 +1,94 @@
+{
+  "name": "Laptop Search",
+  "description": "Schema for searching laptops with specific requirements: slim, light, >32GB RAM, <15 inches, available in Germany, budget 1500€",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "source_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL where the laptop listing was found"
+      },
+      "vendor_name": {
+        "type": "string",
+        "description": "Name of the vendor/retailer selling the laptop"
+      },
+      "brand": {
+        "type": "string",
+        "description": "Laptop manufacturer brand (e.g., Dell, HP, Lenovo, Apple)"
+      },
+      "model_name": {
+        "type": "string",
+        "description": "Specific model name of the laptop"
+      },
+      "cpu_type": {
+        "type": "string",
+        "description": "CPU model and specifications (e.g., Core i7-13700H, Ryzen 7 7840U)"
+      },
+      "cpu_brand": {
+        "type": "string",
+        "description": "CPU manufacturer (Intel, AMD)"
+      },
+      "gpu_type": {
+        "type": "string",
+        "description": "GPU model and specifications (e.g., RTX 4060, Radeon 780M, Integrated)"
+      },
+      "gpu_brand": {
+        "type": "string",
+        "description": "GPU manufacturer (NVIDIA, AMD, Intel)"
+      },
+      "ram_size": {
+        "type": "string",
+        "description": "RAM capacity (must be >32GB as per requirement)"
+      },
+      "disk_size": {
+        "type": "string",
+        "description": "Storage capacity and type (e.g., 1TB SSD, 512GB NVMe)"
+      },
+      "screen_size": {
+        "type": "string",
+        "description": "Screen diagonal size (must be <15 inches as per requirement)"
+      },
+      "weight": {
+        "type": "string",
+        "description": "Laptop weight (should be light as per requirement)"
+      },
+      "thickness": {
+        "type": "string",
+        "description": "Laptop thickness/profile (should be slim as per requirement)"
+      },
+      "price": {
+        "type": "number",
+        "description": "Price in Euros (required, should be ≤1500€)"
+      },
+      "currency": {
+        "type": "string",
+        "description": "Price currency (EUR for German market)"
+      },
+      "availability": {
+        "type": "string",
+        "description": "Availability status in Germany (In Stock, Out of Stock, Pre-order, etc.)"
+      },
+      "meets_requirements": {
+        "type": "boolean",
+        "description": "Whether this laptop meets all specified requirements"
+      }
+    },
+    "required": [
+      "source_url",
+      "vendor_name", 
+      "brand",
+      "model_name",
+      "cpu_type",
+      "cpu_brand",
+      "gpu_type", 
+      "gpu_brand",
+      "disk_size",
+      "price"
+    ]
+  },
+  "prompt": "Search for slim and light laptops available in Germany with more than 32GB RAM, screen size less than 15 inches, and price under 1500€. Extract detailed specifications including CPU, GPU, storage, and availability information. Verify that each laptop meets the specified requirements before including it in results.",
+  "created_at": "2025-07-29T22:15:00.000000",
+  "updated_at": "2025-07-29T22:15:00.000000",
+  "tags": ["laptop", "hardware", "germany", "slim", "light", "32gb-ram", "budget-1500"]
+}

@@ -1,0 +1,40 @@
+# FILE: file_structure_config.toml
+# Configuration for automatic file structure documentation generation
+
+[formatting]
+min_comment_distance = 2
+comment_indent_step = 4
+show_file_counts = true
+show_additional_sections = false
+show_key_directories = false
+
+[directory_limits]
+# Limit depth for directories with many subdirectories
+# Example: "deep/directory" = 1
+
+[incomplete_patterns]
+# Special comments for directories with limited depth
+# Example: "example/dir" = "Example documentation (incomplete)"
+
+[path_patterns]
+# Path patterns for automatic commenting
+# Add your project-specific paths here
+
+[path_patterns.main_directories]
+"dev/" = "Development tools and scripts"
+"tests/" = "Test suite"
+"doc/" = "Project documentation"
+
+[path_patterns.config_files]
+"pyproject.toml" = "Project configuration and dependencies"
+"pytest.ini" = "Test configuration"
+"file_structure_config.toml" = "File structure generator configuration"
+
+[section_templates]
+[section_templates.header]
+title_template = "# {project_name} - File Structure"
+description = [
+    "This document provides an overview of the project file organization.",
+    "The structure is automatically generated from git-tracked files.",
+]
+statistics_template = "**Statistics**: {file_count} files, {dir_count} directories"
