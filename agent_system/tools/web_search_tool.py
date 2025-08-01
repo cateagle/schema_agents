@@ -5,9 +5,7 @@ Web search tool for finding information online.
 from typing import Any, Dict, Optional, List, Type
 from pydantic import BaseModel, Field
 import logging
-import requests
-import json
-from urllib.parse import quote_plus
+from ddgs import DDGS
 
 from agent_system.core.tool import Tool, ToolExecutionError
 from agent_system.core.base_models import ToolConfig, ToolInputBase, ToolOutputBase
@@ -26,7 +24,7 @@ class WebSearchConfig(ToolConfig):
 
 class WebSearchInput(ToolInputBase):
     """Input schema for web search tool."""
-    query: str = Field(..., description="Search query string")
+    query: str = Field(..., description="Search query string", min_length=1)
     max_results: int = Field(default=5, description="Maximum number of results to return", ge=1, le=50)
 
 
@@ -139,38 +137,28 @@ class WebSearchTool(Tool[WebSearchConfig, WebSearchInput, WebSearchOutput]):
             )
     
     def _search_duckduckgo(self, input_data: WebSearchInput) -> WebSearchOutput:
-        """Perform actual DuckDuckGo search using their HTML search."""
+        """Perform actual DuckDuckGo search using the ddgs library."""
         try:
-            # DuckDuckGo HTML search endpoint
-            query_encoded = quote_plus(input_data.query)
-            url = f"https://duckduckgo.com/html/?q={query_encoded}"
+            with DDGS() as ddgs:
+                # Perform search using the ddgs library
+                search_results = list(ddgs.text(
+                    query=input_data.query,
+                    max_results=input_data.max_results,
+                    region=self.config.region,
+                    safesearch='moderate' if self.config.safe_search else 'off'
+                ))
             
-            # Set up headers to mimic a real browser with more realistic values
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-            }
             
-            # Use session for better connection handling
-            session = requests.Session()
-            session.headers.update(headers)
-            
-            response = session.get(url, timeout=15)
-            response.raise_for_status()
-            
-            # Check if we got redirected or blocked
-            if "duckduckgo.com" not in response.url:
-                logger.warning(f"DuckDuckGo redirected to: {response.url}")
-            
-            if len(response.text) < 1000:
-                logger.warning(f"DuckDuckGo returned suspiciously short response: {len(response.text)} chars")
-            
-            # Parse results from HTML (basic extraction)
-            results = self._parse_duckduckgo_html(response.text, input_data.max_results)
+            # Convert ddgs results to our WebSearchResult format
+            results = []
+            for result in search_results:
+                if isinstance(result, dict) and result.get('href') and result.get('title'):
+                    web_result = WebSearchResult(
+                        title=result.get('title', 'No title'),
+                        url=result.get('href', ''),
+                        snippet=result.get('body', 'No snippet available')
+                    )
+                    results.append(web_result)
             
             logger.info(f"DuckDuckGo search for '{input_data.query}' returned {len(results)} results")
             
@@ -185,54 +173,3 @@ class WebSearchTool(Tool[WebSearchConfig, WebSearchInput, WebSearchOutput]):
             logger.error(f"DuckDuckGo search failed: {str(e)}")
             raise ToolExecutionError(f"DuckDuckGo search failed: {str(e)}")
     
-    def _parse_duckduckgo_html(self, html_content: str, max_results: int) -> List[WebSearchResult]:
-        """Parse DuckDuckGo HTML response to extract search results."""
-        try:
-            import re
-            
-            results = []
-            
-            # Try multiple patterns for different DuckDuckGo layouts
-            patterns = [
-                # Current pattern
-                r'<div class="result__body">.*?<a class="result__a" href="([^"]*)"[^>]*>([^<]*)</a>.*?<a class="result__snippet"[^>]*>([^<]*)</a>',
-                # Alternative pattern for newer layout
-                r'<h2 class="result__title">.*?<a rel="nofollow" href="([^"]*)"[^>]*>([^<]*)</a>.*?<div class="result__snippet">([^<]*)</div>',
-                # Simplified pattern
-                r'<a rel="nofollow" href="([^"]*)"[^>]*>([^<]*)</a>.*?<div[^>]*snippet[^>]*>([^<]*)</div>',
-                # Very basic pattern
-                r'href="(https?://[^"]*)"[^>]*>([^<]+)</a>'
-            ]
-            
-            for pattern in patterns:
-                matches = re.findall(pattern, html_content, re.DOTALL | re.IGNORECASE)
-                
-                for i, match in enumerate(matches[:max_results]):
-                    if len(match) >= 2:
-                        url = match[0].strip()
-                        title = re.sub(r'<[^>]+>', '', match[1]).strip()
-                        snippet = re.sub(r'<[^>]+>', '', match[2]).strip() if len(match) > 2 else "No snippet available"
-                        
-                        # Filter out internal DuckDuckGo URLs
-                        if url and title and not url.startswith('https://duckduckgo.com'):
-                            results.append(WebSearchResult(
-                                title=title[:200],  # Limit title length
-                                url=url,
-                                snippet=snippet[:300] if snippet else "No snippet available"
-                            ))
-                
-                # If we found results with this pattern, stop trying others
-                if results:
-                    break
-            
-            # If still no results, log the HTML for debugging
-            if not results:
-                logger.debug(f"DuckDuckGo HTML sample: {html_content[:1000]}...")
-                logger.error("DuckDuckGo HTML parsing failed - no results found with any pattern")
-                raise Exception("No search results found - HTML parsing failed")
-            
-            return results[:max_results]
-            
-        except Exception as e:
-            logger.error(f"Error parsing DuckDuckGo HTML: {str(e)}")
-            raise Exception(f"DuckDuckGo search parsing failed: {str(e)}")

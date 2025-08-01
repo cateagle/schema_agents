@@ -1,24 +1,24 @@
 """
-Standalone Schema Builder component.
+Standalone Schema Builder component using unified chat.
 Complete separation from research functionality.
 """
 
 import streamlit as st
 import json
+import re
 from typing import Optional, Dict, Any
 
 from streamlit_app.core.schema_processor import SchemaProcessor
 from streamlit_app.config.models import SchemaSession
+from streamlit_app.ui.unified_chat import create_schema_builder_chat
 from streamlit_app.ui.base_components import (
-    render_chat_message,
     render_schema_editor,
-    render_action_buttons,
     render_info_box
 )
 
 
 class SchemaBuilder:
-    """Standalone schema building component."""
+    """Standalone schema building component using unified chat."""
     
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -27,12 +27,110 @@ class SchemaBuilder:
         # Initialize session state for schema builder
         if 'schema_session' not in st.session_state:
             st.session_state.schema_session = SchemaSession()
+        
+        # Create unified chat component
+        self.chat = create_schema_builder_chat(
+            chat_key="schema_builder_main",
+            on_export_schema=self._handle_export_schema
+        )
+    
+    def _handle_extract_schema(self, content: str, data: Dict):
+        """Handle schema extraction from chat message."""
+        # Look for JSON schemas in different formats
+        patterns = [
+            r'```json\s*\n(.*?)\n```',  # Standard JSON blocks
+            r'```\s*\n(\{.*?\})\s*\n```',  # JSON in generic code blocks
+            r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'  # Inline JSON objects
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, content, re.DOTALL)
+            if matches:
+                try:
+                    schema_text = matches[0].strip()
+                    schema = json.loads(schema_text)
+                    
+                    # Save to session
+                    session = st.session_state.schema_session
+                    session.current_schema = schema
+                    
+                    st.success(f"✅ Schema extracted with {len(schema.get('properties', {}))} properties!")
+                    st.rerun()
+                    return
+                except json.JSONDecodeError:
+                    continue
+        
+        st.warning("No valid JSON schema found in the message.")
+    
+    def _handle_export_schema(self, content: str, data: Dict):
+        """Handle schema export."""
+        session = st.session_state.schema_session
+        if session.current_schema:
+            schema_json = json.dumps(session.current_schema, indent=2)
+            st.download_button(
+                "📥 Download Schema JSON",
+                data=schema_json,
+                file_name=f"schema_{session.current_schema.get('title', 'untitled')}.json",
+                mime="application/json"
+            )
+        else:
+            st.warning("No schema to export. Extract a schema first.")
+    
+    def _process_user_message(self, message: str) -> str:
+        """Process user message through the schema processor."""
+        if not self.processor:
+            return "Please configure your API key first."
+        
+        try:
+            # Get conversation history from chat
+            conversation_history = []
+            for msg in self.chat.get_messages():
+                conversation_history.append({
+                    "role": msg.role.value,
+                    "content": msg.content
+                })
+            
+            # Process through schema processor
+            response = self.processor.process_schema_conversation(
+                conversation_history, 
+                message
+            )
+            
+            # Auto-extract schema from response
+            self._auto_extract_schema(response)
+            
+            return response
+            
+        except Exception as e:
+            return f"Error processing message: {str(e)}"
+    
+    def _auto_extract_schema(self, content: str):
+        """Automatically extract schema from LLM response."""
+        # Look for JSON schemas in different formats
+        patterns = [
+            r'```json\s*\n(.*?)\n```',  # Standard JSON blocks
+            r'```\s*\n(\{.*?\})\s*\n```',  # JSON in generic code blocks
+            r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'  # Inline JSON objects
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, content, re.DOTALL)
+            if matches:
+                try:
+                    schema_text = matches[0].strip()
+                    schema = json.loads(schema_text)
+                    
+                    # Only extract if it looks like a schema (has type/properties)
+                    if 'type' in schema or 'properties' in schema:
+                        # Save to session
+                        session = st.session_state.schema_session
+                        session.current_schema = schema
+                        return
+                except json.JSONDecodeError:
+                    continue
     
     def render(self) -> Optional[Dict[str, Any]]:
-        """Render the schema builder interface."""
-        st.header("🏗️ JSON Schema Builder")
-        st.markdown("Build a JSON schema through conversation with AI assistant.")
-        
+        """Render just the chat interface."""
         if not self.processor:
             render_info_box("Please configure your API key in the sidebar first.", "warning")
             return None
@@ -40,13 +138,8 @@ class SchemaBuilder:
         # Get current session
         session = st.session_state.schema_session
         
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            self._render_conversation_interface(session)
-        
-        with col2:
-            self._render_schema_interface(session)
+        # Just render the unified chat - no extra columns
+        self.chat.render(llm_callback=self._process_user_message)
         
         return session.current_schema
     

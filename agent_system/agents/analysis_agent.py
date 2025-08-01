@@ -20,7 +20,8 @@ class AnalysisAgent(Agent):
         analysis_type: str = "general",
         timeout: float = 300.0,
         token_limit: int = 75000,
-        identity: Optional[Dict[str, Any]] = None
+        identity: Optional[Dict[str, Any]] = None,
+        tools: Optional[List[Any]] = None
     ):
         system_prompt = f"""
 You are an analysis agent specialized in {analysis_type} analysis.
@@ -67,6 +68,9 @@ Expected result format: {{{{ result_schema }}}}
             "required": ["analysis_type", "findings", "conclusion", "confidence"]
         }
         
+        # Set analysis_type before calling super() so it's available in _setup_agent
+        self.analysis_type = analysis_type
+        
         super().__init__(
             system_prompt=system_prompt,
             task_description="",
@@ -74,10 +78,9 @@ Expected result format: {{{{ result_schema }}}}
             timeout=timeout,
             token_limit=token_limit,
             result_schema=result_schema,
-            identity=identity
+            identity=identity,
+            tools=tools
         )
-        
-        self.analysis_type = analysis_type
     
     def _setup_agent(self) -> None:
         """Setup tools based on analysis type."""

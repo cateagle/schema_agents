@@ -94,11 +94,6 @@ python dev/check_agent_system_structure.py
 - **Intelligent Task Distribution**: Smart workload balancing
 - **Progress Monitoring**: Real-time visibility into research progress
 
-### **Modern UI**
-- **Responsive Design**: Works on desktop and mobile
-- **Real-time Updates**: Live progress tracking and results
-- **Intuitive Workflow**: Schema → Plan → Execute → Export
-
 ## 🤖 How It Works
 
 1. **Define Your Schema**: Use the conversational schema builder to describe exactly what data you need
@@ -115,6 +110,6 @@ python dev/check_agent_system_structure.py
 - **Requests**: Web scraping and API interactions
 - **pytest**: Comprehensive testing framework
 
----
 
-**Ready to start collecting structured data? Launch the app and create your first schema!**
+## Find Repo Here
+https://github.com/cateagle/schema_agents

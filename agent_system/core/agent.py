@@ -680,13 +680,23 @@ Always use proper JSON inside the tags. Tool names should match the registered t
     
     def set_task_description(self, task_description: str) -> None:
         """
-        Update the task description.
+        Update the task description and initialize conversation with system message.
         
         Args:
             task_description: New task description
         """
         self.task_description = task_description
-        logger.info("Task description updated")
+        
+        # Clear any existing rendered prompt cache
+        self._rendered_system_prompt = None
+        
+        # Initialize conversation with system message if not already started
+        if not self._conversation_started:
+            system_prompt = self._render_system_prompt()
+            self.conversation.append(Message(role="system", content=system_prompt))
+            self._conversation_started = True
+        
+        logger.info("Task description updated and conversation initialized")
     
     
     def update_tool_config(self, tool_alias: str, new_config: ToolConfig) -> bool:

@@ -7,6 +7,7 @@ No phases, minimal configuration, maximum usability.
 import streamlit as st
 import sys
 import os
+import json
 
 # Add the project root to Python path for absolute imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,9 +17,9 @@ from streamlit_app.config.streamlined_config import (
     CONVERSATION_MODELS, 
     AGENT_MODELS
 )
-from streamlit_app.components.schema_catalog import SchemaCatalogUI
 from streamlit_app.components.schema_builder import SchemaBuilder
 from streamlit_app.components.research_chat import ResearchChatTool
+from streamlit_app.config.models import SchemaSession
 
 
 def render_sidebar() -> StreamlinedConfig:
@@ -164,57 +165,143 @@ def main():
     # Sidebar configuration
     config = render_sidebar()
     
-    # Main content: Three independent tools
-    tab1, tab2, tab3 = st.tabs(["📚 Schema Catalog", "📋 Schema Builder", "🔍 Research Tool"])
+    # Main content: Three simple tabs
+    tab1, tab2, tab3 = st.tabs(["📋 Schema", "🔍 Search", "📊 Data"])
     
-    # Schema sources
-    catalog_schema = None
-    builder_schema = None
+    # Global schema state
+    current_schema = None
+    if 'schema_session' in st.session_state and st.session_state.schema_session.current_schema:
+        current_schema = st.session_state.schema_session.current_schema
     
     with tab1:
-        # Schema Catalog - always available
-        catalog_ui = SchemaCatalogUI()
-        catalog_schema = catalog_ui.render()
+        # Better layout: wide chat, narrow schema editor
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            if not config.is_valid:
+                st.warning("⚠️ Please configure your API key in the sidebar first.")
+            else:
+                schema_builder = SchemaBuilder(config.openrouter_api_key)
+                schema_builder.render()
+        
+        with col2:
+            st.subheader("Current Schema")
+            
+            # Use the current schema directly in the text area
+            schema_display = ""
+            if current_schema:
+                schema_display = json.dumps(current_schema, indent=2)
+            
+            schema_text = st.text_area(
+                "Edit or paste JSON schema:",
+                value=schema_display,
+                height=400,
+                help="This shows your current schema. Edit directly or use the AI assistant.",
+                key="schema_editor"
+            )
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("💾 Update", type="primary", use_container_width=True):
+                    try:
+                        schema = json.loads(schema_text) if schema_text.strip() else None
+                        if 'schema_session' not in st.session_state:
+                            st.session_state.schema_session = SchemaSession()
+                        st.session_state.schema_session.current_schema = schema
+                        st.success("✅ Schema updated!")
+                        st.rerun()
+                    except json.JSONDecodeError as e:
+                        st.error(f"Invalid JSON: {str(e)}")
+            
+            with col_b:
+                if st.button("🗑️ Clear", use_container_width=True):
+                    if 'schema_session' not in st.session_state:
+                        st.session_state.schema_session = SchemaSession()
+                    st.session_state.schema_session.current_schema = None
+                    st.success("Schema cleared!")
+                    st.rerun()
+            
+            # Show schema info and validation
+            if current_schema:
+                properties_count = len(current_schema.get('properties', {}))
+                schema_title = current_schema.get('title', 'Untitled')
+                
+                # Basic validation
+                is_valid = True
+                validation_issues = []
+                
+                if 'type' not in current_schema:
+                    is_valid = False
+                    validation_issues.append("Missing 'type'")
+                
+                if 'properties' not in current_schema:
+                    is_valid = False
+                    validation_issues.append("Missing 'properties'")
+                
+                # Display status
+                if is_valid:
+                    st.success(f"✅ **{schema_title}** • {properties_count} properties • Valid")
+                else:
+                    issues_text = ", ".join(validation_issues)
+                    st.error(f"❌ **{schema_title}** • {properties_count} properties • Issues: {issues_text}")
     
     with tab2:
         if not config.is_valid:
             st.warning("⚠️ Please configure your API key in the sidebar first.")
+        elif not current_schema:
+            st.warning("⚠️ Please define a schema in the Schema tab first.")
         else:
-            schema_builder = SchemaBuilder(config.openrouter_api_key)
-            builder_schema = schema_builder.render()
-    
-    with tab3:
-        if not config.is_valid:
-            st.warning("⚠️ Please configure your API key in the sidebar first.")
-        else:
-            # Get schema from multiple sources
-            available_schema = None
-            schema_source = "None"
+            # Show current schema info
+            st.info(f"Using schema: **{current_schema.get('title', 'Untitled')}** with {len(current_schema.get('properties', {}))} properties")
             
-            # Priority: 1. Catalog selection, 2. Schema builder, 3. Manual
-            if catalog_schema:
-                available_schema = catalog_schema
-                schema_source = "Schema Catalog"
-            elif 'schema_session' in st.session_state and st.session_state.schema_session.current_schema:
-                available_schema = st.session_state.schema_session.current_schema
-                schema_source = "Schema Builder"
-            
-            # Show schema source
-            if available_schema:
-                st.info(f"📋 Using schema from: **{schema_source}**")
-            
-            # Research tool config
             research_config = {
                 'num_agents': config.num_agents,
                 'max_results_per_agent': config.max_results_per_agent,
                 'agent_timeout': config.agent_timeout,
                 'agent_model': config.agent_model,
-                'conversation_model': config.conversation_model,
-                'research_depth': 'medium'
+                'conversation_model': config.conversation_model
             }
-            
             research_chat = ResearchChatTool(config.openrouter_api_key, research_config)
-            research_chat.render(available_schema)
+            research_chat.render(available_schema=current_schema)
+    
+    with tab3:
+        if 'research_results' in st.session_state and st.session_state.research_results:
+            results = st.session_state.research_results
+            
+            # Action buttons
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                # Copy to clipboard button
+                results_json = json.dumps(results, indent=2)
+                if st.button("📋 Copy Results", use_container_width=True):
+                    # Use JavaScript to copy to clipboard
+                    st.components.v1.html(f"""
+                    <script>
+                    navigator.clipboard.writeText(`{results_json.replace('`', '\\`')}`).then(function() {{
+                        console.log('Results copied to clipboard');
+                    }});
+                    </script>
+                    """, height=0)
+                    st.toast("📋 Results copied to clipboard!")
+            
+            with col2:
+                # Download button
+                st.download_button(
+                    label="💾 Download JSON",
+                    data=results_json,
+                    file_name="research_results.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            
+            with col3:
+                st.success(f"Found {len(results)} results")
+            
+            # Single JSON block display
+            st.json(results)
+        else:
+            st.info("No research data yet. Run a search first.")
 
 
 if __name__ == "__main__":

@@ -268,8 +268,9 @@ class TestAgent:
         assert agent.system_prompt == "New prompt {{tools_documentation}}"
         assert agent.task_description == "New task"
         
-        # Test that cached prompt is invalidated
-        assert agent._rendered_system_prompt is None
+        # Test that cached prompt reflects the new system prompt
+        rendered = agent._render_system_prompt()
+        assert "New prompt" in rendered
     
     def test_agent_conversation_reset(self, mock_llm_api):
         """Test resetting agent conversation."""
